@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/leoleovich/3djuggler/juggler"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"time"
+
+	"github.com/leoleovich/3djuggler/juggler"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
-	jobfile                  = "/tmp/job"
 	waitingForButtonInterval = 10 * time.Minute
 	pollingInterval          = 5 * time.Second
 	defaultListen            = "[::1]:8888"
@@ -88,8 +88,6 @@ func main() {
 	if daemon.config.Serial == "" {
 		daemon.config.Serial = defaultSerial
 	}
-
-	daemon.jobfile = jobfile
 
 	daemon.ie = &InternEndpoint{
 		APIApp: daemon.config.InternEndpoint.APIApp,

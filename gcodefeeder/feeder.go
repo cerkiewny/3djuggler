@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -51,7 +51,7 @@ func (s Status) String() string {
 
 type Feeder struct {
 	deviceName string
-	fileName   string
+	gcode      io.Reader
 	printerAck chan bool
 	progress   int
 	status     Status
@@ -65,10 +65,10 @@ type Feeder struct {
 	cancelFunc context.CancelFunc
 }
 
-func NewFeeder(deviceName, fileName string) (*Feeder, error) {
+func NewFeeder(deviceName string, gcode io.Reader) (*Feeder, error) {
 	f := Feeder{
 		deviceName:     deviceName,
-		fileName:       fileName,
+		gcode:          gcode,
 		printerAck:     make(chan bool),
 		progressRegexp: regexp.MustCompile("M73 P([0-9]+).*"),
 	}
@@ -79,11 +79,6 @@ func NewFeeder(deviceName, fileName string) (*Feeder, error) {
 		return nil, fmt.Errorf("failed to connect to %s: %w", deviceName, err)
 	}
 	f.status = Ready
-
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return nil, fmt.Errorf("failed to open %s: %w", fileName, err)
-	}
-
 	return &f, nil
 }
 
@@ -211,7 +206,7 @@ func (f *Feeder) write(ctx context.Context, command string) error {
 	case <-f.printerAck:
 		break
 	case <-ctx.Done():
-		return errors.New("Context is Done")
+		return errors.New("context is Done")
 	}
 	return nil
 }
@@ -235,27 +230,20 @@ func (f *Feeder) Feed() error {
 	<-f.printerAck
 	f.Start()
 
-	file, err := os.Open(f.fileName)
-	if err != nil {
-		f.status = Error
-		return err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(f.gcode)
 	for scanner.Scan() {
 		line := scanner.Text()
 		for f.status == ManuallyPaused {
 			select {
 			case <-ctx.Done():
-				return errors.New("Context is Done")
+				return errors.New("context is Done")
 			default:
 				time.Sleep(5 * time.Second)
 				log.Info("Feeder: paused manually")
 			}
 		}
 		f.status = Printing
-		err = f.write(ctx, line)
+		err := f.write(ctx, line)
 		if err != nil {
 			f.status = Error
 			return err
