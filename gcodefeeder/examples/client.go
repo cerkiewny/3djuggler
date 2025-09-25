@@ -1,10 +1,12 @@
 package main
 
 import (
+	"os"
+	"strings"
+	"time"
+
 	"github.com/leoleovich/3djuggler/gcodefeeder"
 	log "github.com/sirupsen/logrus"
-	"os"
-	"time"
 )
 
 func main() {
@@ -13,7 +15,7 @@ func main() {
 
 	feeder, _ := gcodefeeder.NewFeeder(
 		"/dev/tty.usbmodem14601",
-		"/Users/leoleovich/3d/M5.0_Nut_0.3mm_PLA_MK3.gcode",
+		strings.NewReader("M140 S0\nM104 S0\nM107\nM84 X Y E\n"),
 	)
 	go func() {
 		for {

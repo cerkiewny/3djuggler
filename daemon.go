@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/leoleovich/3djuggler/gcodefeeder"
@@ -15,7 +15,6 @@ import (
 
 type Daemon struct {
 	config     *Config
-	jobfile    string
 	job        *juggler.Job
 	ie         *InternEndpoint
 	feeder     *gcodefeeder.Feeder
@@ -105,15 +104,10 @@ func (daemon *Daemon) Start() {
 
 			log.Info("Sending to printer")
 			log.Debug("FileSize: ", len(daemon.job.FileContent))
-			err := os.WriteFile(daemon.jobfile, []byte(daemon.job.FileContent), 0644)
-			if err != nil {
-				log.Error(err)
-				break
-			}
 
 			daemon.feeder, err = gcodefeeder.NewFeeder(
 				daemon.config.Serial,
-				daemon.jobfile,
+				strings.NewReader(daemon.job.FileContent),
 			)
 			if err != nil {
 				log.Error("Failed to create Feeder: ", err)
@@ -232,7 +226,8 @@ func (daemon *Daemon) StartHandler(w http.ResponseWriter, _ *http.Request) {
 	// Add headers to allow AJAX
 	juggler.SetHeaders(w)
 
-	if daemon.job.Status == juggler.StatusWaitingButton {
+	switch daemon.job.Status {
+	case juggler.StatusWaitingButton:
 		// Initial start
 		daemon.UpdateStatus(juggler.StatusSending)
 		for daemon.job.Status != juggler.StatusSending {
@@ -240,7 +235,7 @@ func (daemon *Daemon) StartHandler(w http.ResponseWriter, _ *http.Request) {
 			time.Sleep(1 * time.Second)
 		}
 		return
-	} else if daemon.job.Status == juggler.StatusPaused {
+	case juggler.StatusPaused:
 		// Unpause
 		daemon.feeder.Start()
 		daemon.UpdateStatus(juggler.StatusPrinting)

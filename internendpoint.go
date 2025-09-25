@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/leoleovich/3djuggler/gcodefeeder"
-	"github.com/leoleovich/3djuggler/juggler"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/leoleovich/3djuggler/gcodefeeder"
+	"github.com/leoleovich/3djuggler/juggler"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -162,7 +163,7 @@ func (ie *InternEndpoint) getJob(id int) error {
 	ie.job = result.Content
 
 	if ie.job.ID == 0 {
-		return errors.New("Nothing to print")
+		return errors.New("nothing to print")
 	}
 
 	return nil
