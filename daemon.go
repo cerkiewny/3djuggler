@@ -105,6 +105,12 @@ func (daemon *Daemon) Start() {
 			log.Info("Sending to printer")
 			log.Debug("FileSize: ", len(daemon.job.FileContent))
 
+			if err = gcodefeeder.ValidateGcode(strings.NewReader(daemon.job.FileContent)); err != nil {
+				log.Errorf("Gcode validation failed: %v", err)
+				daemon.UpdateStatus(juggler.StatusCancelling)
+				break
+			}
+
 			daemon.feeder, err = gcodefeeder.NewFeeder(
 				daemon.config.Serial,
 				strings.NewReader(daemon.job.FileContent),
